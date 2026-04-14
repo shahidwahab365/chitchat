@@ -4,7 +4,6 @@ import MainHeader from "@/components/main-header";
 import React, { Suspense, useEffect } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BellRing, MessageSquareText, Phone, UsersRound } from "lucide-react";
-import { useSearchParams, useRouter } from "next/navigation";
 import { ModeToggle } from "@/components/theme-toggle";
 import {
   SignedIn,
@@ -45,13 +44,11 @@ const items: TabItem[] = [
 ];
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
-  const searchParams = useSearchParams();
-  const router = useRouter();
+  const [currentTab, setCurrentTab] = React.useState("chat");
   const { user } = useUser();
   const { session } = useSession();
   const supabase = useSupabase();
   const client = useQueryClient();
-  const currentTab = searchParams.get("tab") || "chat";
   const { setOnlineUsersBulk } = useUserOnlineState();
 
   const notifyAudioRef = React.useRef<HTMLAudioElement | null>(null);
@@ -60,11 +57,6 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
     notifyAudioRef.current = new Audio(SOUNDS.NOTIFICATION);
   }, []);
 
-  const handleTabChange = (value: string) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("tab", value);
-    router.replace(`?${params.toString()}`);
-  };
 
   useEffect(() => {
     if (!user?.id) return;
@@ -105,10 +97,10 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           });
         })
         .subscribe((status) => {
-          if (status === "CLOSED") {
+          if (status === 'CLOSED') {
             subscribe();
           }
-        });
+        })
 
       const messageChannel = supabase
         .channel("message-listner")
@@ -192,7 +184,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           },
         )
         .subscribe((status) => {
-          if (status === "CLOSED") {
+          if (status === 'CLOSED') {
             subscribe();
           }
         });
@@ -216,7 +208,6 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               user_id: user.id,
             });
           }
-
           if (status === "CLOSED") {
             subscribe();
           }
@@ -239,7 +230,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <Tabs
       value={currentTab}
-      onValueChange={handleTabChange}
+      onValueChange={setCurrentTab}
       className="flex flex-1 overflow-hidden"
     >
       <div className="flex flex-1 overflow-hidden">
