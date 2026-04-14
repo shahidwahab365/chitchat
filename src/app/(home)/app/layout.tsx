@@ -52,8 +52,13 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   const supabase = useSupabase();
   const client = useQueryClient();
   const currentTab = searchParams.get("tab") || "chat";
-  const notifyAudio = new Audio(SOUNDS.NOTIFICATION);
   const { setOnlineUsersBulk } = useUserOnlineState();
+
+  const notifyAudioRef = React.useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    notifyAudioRef.current = new Audio(SOUNDS.NOTIFICATION);
+  }, []);
 
   const handleTabChange = (value: string) => {
     const params = new URLSearchParams(searchParams.toString());
@@ -93,8 +98,8 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             queryKey: ["notifications", user.id],
           });
 
-          notifyAudio.volume = 1;
-          notifyAudio.play();
+          notifyAudioRef.current!.volume = 1;
+          notifyAudioRef.current?.play();
           toast(payload.payload.title, {
             description: payload.payload.body,
           });
