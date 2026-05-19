@@ -1,5 +1,3 @@
-"use client";
-
 import Calls from "@/components/calls";
 import Chat from "@/components/chat";
 import MyNetwork from "@/components/my-network";
@@ -10,8 +8,8 @@ function ChatPage() {
     <div className="w-full h-full overflow-auto" id="scrollableDiv">
       <Chat />
       <Calls />
-      <Notification />
       <MyNetwork />
+      <Notification />
     </div>
   );
 }

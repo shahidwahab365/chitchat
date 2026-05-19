@@ -2,14 +2,11 @@
 
 import React, { useState, useEffect } from "react";
 import {
-  MessageCircle,
   Shield,
   Zap,
   Globe,
-  Lock,
   Sparkles,
 } from "lucide-react";
-import Link from "next/link";
 import Logo from "@/components/logo";
 
 function AuthLayout({ children }: { children: React.ReactNode }) {

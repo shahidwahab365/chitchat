@@ -19,6 +19,32 @@ import UserAvatar from "./avatar";
 import { useUserOnlineState } from "@/store/use-get-user-online-state";
 import { useCallRNDState } from "@/store/use-call-rnd";
 import { useState } from "react";
+import { toast } from "sonner";
+
+export async function requestUserMediaAccess({
+  type,
+}: {
+  type: "video" | "audio";
+}) {
+  try {
+    await navigator.mediaDevices.getUserMedia({
+      video: type === "video" ? true : false,
+      audio: true,
+    });
+
+    return true;
+  } catch (error: any) {
+    if (error.name === "NotAllowedError") {
+      toast.error(
+        type === "video"
+          ? "You need to allow camera and microphone access to use this feature."
+          : "You need to allow microphone access to use this feature.",
+      );
+    }
+
+    return false;
+  }
+}
 
 function ChatAreaHeader({
   contact,
@@ -33,7 +59,6 @@ function ChatAreaHeader({
   };
 
   const onlineUsers = useUserOnlineState((state) => state.onlineUsers) || [];
-
   const setEnableCallRND = useCallRNDState().setEnableCallRND;
 
   return (
@@ -79,9 +104,16 @@ function ChatAreaHeader({
             <DropdownMenuGroup className="flex gap-2">
               <Button
                 className="flex-1 rounded-full flex items-center justify-center gap-2 cursor-pointer hover:bg-primary/80"
-                onClick={() => {
-                  setOpen(false)
-                  setEnableCallRND("audio")
+                onClick={async () => {
+                  const res = await requestUserMediaAccess({ type: "audio" });
+                  if (!res) return;
+                  setOpen(false);
+                  setEnableCallRND({
+                    type: "audio",
+                    callee_id: contact?.contact_user_id,
+                    callMode: "direct",
+                    callDirection: "outgoing",
+                  });
                 }}
               >
                 <Phone className="size-5" strokeWidth={1.89} />
@@ -89,9 +121,17 @@ function ChatAreaHeader({
               </Button>
               <Button
                 className="flex-1 rounded-full flex items-center justify-center gap-2 cursor-pointer hover:bg-primary/80"
-                onClick={() => {
-                  setOpen(false)
-                  setEnableCallRND("video")}}
+                onClick={async () => {
+                  const res = await requestUserMediaAccess({ type: "video" });
+                  if (!res) return;
+                  setOpen(false);
+                  setEnableCallRND({
+                    type: "video",
+                    callee_id: contact?.contact_user_id,
+                    callMode: "direct",
+                    callDirection: "outgoing",
+                  });
+                }}
               >
                 <Video className="size-5" strokeWidth={1.89} />
                 Video

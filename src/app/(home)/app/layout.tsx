@@ -1,9 +1,11 @@
 "use client";
 
 import MainHeader from "@/components/main-header";
-import React, { Suspense, useEffect } from "react";
+import React, { Suspense, useCallback, useEffect, useRef } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { BellRing, MessageSquareText, Phone, UsersRound } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { ModeToggle } from "@/components/theme-toggle";
 import {
   SignedIn,
@@ -23,6 +25,7 @@ import { IMessages } from "@/types/messages";
 import { useUserOnlineState } from "@/store/use-get-user-online-state";
 import { useCallRNDState } from "@/store/use-call-rnd";
 import CallRND from "@/components/call-rnd";
+import { useUpdateIsInCall } from "@/hooks/react-query/mutation-calls";
 
 type TabItem = {
   Icon: keyof typeof icons;
@@ -44,30 +47,124 @@ const items: TabItem[] = [
 ];
 
 function AppLayoutContent({ children }: { children: React.ReactNode }) {
-  const [currentTab, setCurrentTab] = React.useState("chat");
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+  const router = useRouter();
   const { user } = useUser();
   const { session } = useSession();
   const supabase = useSupabase();
   const client = useQueryClient();
+  const currentTab = searchParams.get("tab") || "chat";
+  const notifyAudioRef = useRef<HTMLAudioElement | null>(null);
   const { setOnlineUsersBulk } = useUserOnlineState();
+  const setEnableCallRND = useCallRNDState((state) => state.setEnableCallRND);
+  const setDisableCallRND = useCallRNDState((state) => state.setDisableCallRND);
+  const ringtoneRef = useRef<HTMLAudioElement | null>(null);
+  const call_status = useCallRNDState((state) => state.call_status) as
+    | string
+    | null;
+  const callDirection = useCallRNDState((state) => state.callDirection);
+  const cached_caller_id = useCallRNDState((state) => state.caller_id) as
+    | string
+    | null;
+  const updateLiveKitInfo = useCallRNDState((state) => state.updateLiveKitInfo);
+  const updateCallStatus = useCallRNDState((state) => state.updateCallStatus);
+  const { mutate: updateIsInCall } = useUpdateIsInCall();
 
-  const notifyAudioRef = React.useRef<HTMLAudioElement | null>(null);
+  const handleTabChange = useCallback(
+    (value: string) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set("tab", value);
+      router.replace(`${pathname}?${params.toString()}`, { scroll: false });
+    },
+    [pathname, router, searchParams],
+  );
 
   useEffect(() => {
-    notifyAudioRef.current = new Audio(SOUNDS.NOTIFICATION);
-  }, []);
+    if (!ringtoneRef.current) {
+      ringtoneRef.current = new Audio(SOUNDS.RINGTONE);
+    }
 
+    const ringtoneAudio = ringtoneRef.current;
+
+    if (call_status === "ringing" && callDirection === "ingoing") {
+      ringtoneAudio.volume = 1;
+      ringtoneAudio.play();
+
+      const timer = setTimeout(() => {
+        ringtoneAudio.pause();
+        ringtoneAudio.currentTime = 0;
+        updateIsInCall({ is_in_call: false });
+        setDisableCallRND();
+      }, 20000);
+
+      return () => clearTimeout(timer);
+    } else {
+      ringtoneAudio.pause();
+      ringtoneAudio.currentTime = 0;
+    }
+  }, [call_status, callDirection, setDisableCallRND, updateIsInCall]);
 
   useEffect(() => {
     if (!user?.id) return;
 
     const channels: any[] = [];
-
     const subscribe = async () => {
       const token = await session?.getToken({ template: "supabase" });
       if (!token) return;
 
       await supabase.realtime.setAuth(token);
+
+      const incommingCall = supabase
+        .channel(`incomming-call:${user.id}`, {
+          config: {
+            private: false,
+          },
+        })
+        .on("broadcast", { event: "CALL" }, (payload) => {
+          const {
+            caller_id,
+            call_type,
+            callDirection,
+            call_mode,
+            call_status,
+            roomName,
+          } = payload.payload;
+
+          if (call_status === "close" && cached_caller_id === caller_id) {
+            updateCallStatus({ call_status });
+            return;
+          }
+
+          if (call_status === "accepted") {
+            updateCallStatus({ call_status });
+            if (roomName) {
+              updateLiveKitInfo({ roomName, token: null });
+            }
+            return;
+          }
+
+          updateIsInCall({ is_in_call: true });
+          setEnableCallRND({
+            type: call_type,
+            callee_id: user.id,
+            callMode: call_mode,
+            callDirection:
+              callDirection === "outgoing" ? "ingoing" : "outgoing",
+            caller_id,
+            call_status,
+          });
+
+          if (call_status !== "accepted") {
+            updateLiveKitInfo({ roomName, token: null });
+            client.invalidateQueries({
+              queryKey: ["get-calls", user?.id],
+            });
+          }
+        })
+        .subscribe((status) => {
+          if (status === "CLOSED") subscribe();
+        });
 
       const notificationChannel = supabase
         .channel(`notifications:${user.id}`, {
@@ -90,17 +187,21 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
             queryKey: ["notifications", user.id],
           });
 
-          notifyAudioRef.current!.volume = 1;
-          notifyAudioRef.current?.play();
+          if (!notifyAudioRef.current) {
+            notifyAudioRef.current = new Audio(SOUNDS.NOTIFICATION);
+          }
+
+          notifyAudioRef.current.volume = 1;
+          notifyAudioRef.current.play();
           toast(payload.payload.title, {
             description: payload.payload.body,
           });
         })
         .subscribe((status) => {
-          if (status === 'CLOSED') {
+          if (status === "CLOSED") {
             subscribe();
           }
-        })
+        });
 
       const messageChannel = supabase
         .channel("message-listner")
@@ -184,7 +285,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           },
         )
         .subscribe((status) => {
-          if (status === 'CLOSED') {
+          if (status === "CLOSED") {
             subscribe();
           }
         });
@@ -208,12 +309,18 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
               user_id: user.id,
             });
           }
+
           if (status === "CLOSED") {
             subscribe();
           }
         });
 
-      channels.push(notificationChannel, messageChannel, presenceChannel);
+      channels.push(
+        notificationChannel,
+        messageChannel,
+        presenceChannel,
+        incommingCall,
+      );
     };
 
     subscribe();
@@ -230,7 +337,7 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
   return (
     <Tabs
       value={currentTab}
-      onValueChange={setCurrentTab}
+      onValueChange={handleTabChange}
       className="flex flex-1 overflow-hidden"
     >
       <div className="flex flex-1 overflow-hidden">
@@ -238,13 +345,24 @@ function AppLayoutContent({ children }: { children: React.ReactNode }) {
           <TabsList className="flex bg-sidebar flex-col flex-1 items-center justify-start gap-2 p-2 border-none rounded-none w-14">
             {items.map((item) => {
               const Icon = icons[item.Icon];
+              const params = new URLSearchParams(searchParams.toString());
+              params.set("tab", item.value);
+
               return (
                 <TabsTrigger
                   key={item.value}
                   value={item.value}
+                  asChild
                   className="flex items-center justify-center dark:data-[state=active]:bg-primary-foreground gap-2 rounded-full border-none max-h-9 min-w-9 p-2 cursor-pointer"
                 >
-                  <Icon className="size-5" strokeWidth={1.89} />
+                  <Link
+                    href={`${pathname}?${params.toString()}`}
+                    replace
+                    scroll={false}
+                    aria-label={item.value}
+                  >
+                    <Icon className="size-5" strokeWidth={1.89} />
+                  </Link>
                 </TabsTrigger>
               );
             })}

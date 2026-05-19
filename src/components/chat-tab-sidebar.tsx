@@ -1,4 +1,11 @@
-import { EllipsisVertical, Search, SquarePlus, X } from "lucide-react";
+import {
+  CameraIcon,
+  EllipsisVertical,
+  PhoneCall,
+  Search,
+  SquarePlus,
+  TrashIcon,
+} from "lucide-react";
 import { Button } from "./ui/button";
 import { Label } from "./ui/label";
 import { ResizablePanel } from "./ui/resizable";
@@ -9,6 +16,17 @@ import AddFriend from "./add-friend-overlay";
 import { ContactListSkeleton } from "./skeletons/contacts-skeleton";
 import { useUserOnlineState } from "@/store/use-get-user-online-state";
 import UserAvatar from "./avatar";
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuGroup,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from "@/components/ui/context-menu";
+import { requestUserMediaAccess } from "./chat-area-header";
+import { useCallRNDState } from "@/store/use-call-rnd";
+import { useRemoveContact } from "@/hooks/react-query/mutation-contact";
 
 function ChatTabSidebar({
   contacts,
@@ -19,6 +37,9 @@ function ChatTabSidebar({
 }) {
   const [showOverlay, setShowOverlay] = useState(false);
   const onlineUsers = useUserOnlineState((state) => state.onlineUsers) || [];
+  const [openContextId, setOpenContextId] = useState<string | null>(null);
+  const setEnableCallRND = useCallRNDState((state) => state.setEnableCallRND);
+  const { mutate: removeContactFn, isPending } = useRemoveContact();
 
   return (
     <ResizablePanel
@@ -64,29 +85,90 @@ function ChatTabSidebar({
             {loading ? (
               <ContactListSkeleton />
             ) : (
-              contacts?.map((contact: any, index: number) => {
+              contacts?.map((contact: any) => {
                 return (
-                  <TabsTrigger
-                    key={index}
-                    value={contact.id}
-                    className="flex items-center justify-start gap-2 rounded-md border-none w-full max-h-fit p-2 cursor-pointer
-    hover:bg-accent/60 dark:data-[state=active]:bg-accent/60 data-[state=active]:text-foreground transition-colors"
+                  <ContextMenu
+                    key={contact.id}
+                    onOpenChange={(open) =>
+                      setOpenContextId(open ? contact.id : null)
+                    }
                   >
-                    <UserAvatar
-                      src={contact.info.avatar_url}
-                      alt="avatar"
-                      isOnline={!!onlineUsers[contact.contact_user_id]}
-                    />
+                    <ContextMenuTrigger className="w-full h-fit">
+                      <TabsTrigger
+                        value={contact.id}
+                        className={`flex items-center justify-start gap-2 rounded-md border-none w-full max-h-fit p-2 cursor-pointer
+    hover:bg-accent/60 dark:data-[state=active]:bg-accent/60 data-[state=active]:text-foreground transition-colors ${openContextId === contact.id ? "bg-accent/60 text-foreground" : ""}`}
+                      >
+                        <UserAvatar
+                          src={contact.info.avatar_url}
+                          alt="avatar"
+                          isOnline={!!onlineUsers[contact.contact_user_id]}
+                        />
 
-                    <div className="flex flex-col items-start justify-center overflow-hidden min-w-0">
-                      <h2 className="text-sm font-medium">
-                        {contact.info.full_name}
-                      </h2>
-                      <span className="text-xs text-muted-foreground italic truncate font-normal">
-                        Click to start conversation
-                      </span>
-                    </div>
-                  </TabsTrigger>
+                        <div className="flex flex-col items-start justify-center overflow-hidden min-w-0">
+                          <h2 className="text-sm font-medium">
+                            {contact.info.full_name}
+                          </h2>
+                          <span className="text-xs text-muted-foreground italic truncate font-normal">
+                            Click to start conversation
+                          </span>
+                        </div>
+                      </TabsTrigger>
+                    </ContextMenuTrigger>
+                    <ContextMenuContent className="w-50">
+                      <ContextMenuGroup>
+                        <ContextMenuItem
+                          onClick={async () => {
+                            const res = await requestUserMediaAccess({
+                              type: "audio",
+                            });
+                            if (!res) return;
+                            setEnableCallRND({
+                              type: "audio",
+                              callee_id: contact?.contact_user_id,
+                              callMode: "direct",
+                              callDirection: "outgoing",
+                            });
+                          }}
+                          className="cursor-pointer gap-5"
+                        >
+                          <PhoneCall strokeWidth={1.89} className=" size-4" />
+                          Audio Call
+                        </ContextMenuItem>
+                        <ContextMenuItem
+                          onClick={async () => {
+                            const res = await requestUserMediaAccess({
+                              type: "video",
+                            });
+                            if (!res) return;
+                            setEnableCallRND({
+                              type: "video",
+                              callee_id: contact?.contact_user_id,
+                              callMode: "direct",
+                              callDirection: "outgoing",
+                            });
+                          }}
+                          className="cursor-pointer gap-5"
+                        >
+                          <CameraIcon strokeWidth={1.89} className=" size-4" />
+                          Video Call
+                        </ContextMenuItem>
+                      </ContextMenuGroup>
+                      <ContextMenuSeparator />
+                      <ContextMenuGroup>
+                        <ContextMenuItem
+                          className="cursor-pointer gap-5"
+                          variant="destructive"
+                          onClick={() =>
+                            removeContactFn({ id: contact.contact_user_id })
+                          }
+                        >
+                          <TrashIcon strokeWidth={1.89} className="size-4" />
+                          {isPending ? "Deleting..." : "Delete"}
+                        </ContextMenuItem>
+                      </ContextMenuGroup>
+                    </ContextMenuContent>
+                  </ContextMenu>
                 );
               })
             )}

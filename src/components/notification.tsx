@@ -8,6 +8,7 @@ import { Button } from "./ui/button";
 import { timeAgo } from "@/lib/time-ago";
 import { NotificationSkeleton } from "./skeletons/notification-skeleton";
 import InfiniteScroll from "react-infinite-scroll-component";
+import UserAvatar from "./avatar";
 
 type NotificationInfo = {
   avatar_url?: string;
@@ -38,7 +39,6 @@ function NotificationRow({ n }: { n: NotificationItem }) {
         !n.is_read ? "bg-primary/5" : "",
       ].join(" ")}
     >
-      {/* Unread dot */}
       {!n.is_read && (
         <span
           className="absolute right-4 top-4 size-2.5 rounded-full bg-primary"
@@ -47,16 +47,7 @@ function NotificationRow({ n }: { n: NotificationItem }) {
       )}
 
       <div className="flex gap-3">
-        <div className="relative shrink-0 ">
-          <Image
-            src={avatar}
-            alt=""
-            className="size-10 rounded-full object-cover ring-1 ring-border"
-            width={50}
-            height={50}
-            priority={false}
-          />
-        </div>
+        <UserAvatar src={avatar} className="w-10 h-10 shrink-0" alt="avatar" />
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
@@ -78,31 +69,6 @@ function NotificationRow({ n }: { n: NotificationItem }) {
               </p>
             </div>
           </div>
-
-          {n.notification_type === "connect_request" && (
-            <div className="mt-3 flex flex-col gap-2 sm:flex-row">
-              <Button
-                className={[
-                  "inline-flex items-center justify-center rounded-full px-3 py-2 text-sm font-medium",
-                  "bg-primary text-primary-foreground",
-                  "hover:opacity-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer",
-                ].join(" ")}
-                type="button"
-              >
-                Accept
-              </Button>
-              <Button
-                className={[
-                  "inline-flex items-center justify-center rounded-full px-3 py-2 text-sm font-medium",
-                  "border border-border bg-background text-foreground",
-                  "hover:bg-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring cursor-pointer",
-                ].join(" ")}
-                type="button"
-              >
-                Ignore
-              </Button>
-            </div>
-          )}
         </div>
       </div>
     </li>

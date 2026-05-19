@@ -12,6 +12,7 @@ import ChatForm from "./chat-form";
 import ChatAreaHeader from "./chat-area-header";
 import { useGetContacts } from "@/hooks/react-query/query-contact";
 import ChatsMain from "./chats-main";
+import { MessageCircle, MousePointerClick } from "lucide-react";
 
 export type UploadProgress = {
   fileName: string;
@@ -46,12 +47,24 @@ function Chat() {
       >
         <ResizablePanelGroup direction="horizontal" className="h-full">
           <ChatTabSidebar contacts={data} loading={isLoading} />
-          <ResizableHandle withHandle />
+          <ResizableHandle withHandle={false} />
           <ResizablePanel>
+
             <TabsContent value="empty" className="h-full">
               <div className="h-full flex items-center justify-center text-muted-foreground">
-                <div className="text-center space-y-2">
-                  <h2 className="text-lg font-medium">No chat selected</h2>
+                <div className="flex max-w-sm flex-col items-center text-center">
+                  <div className="relative mb-5 flex size-20 items-center justify-center rounded-full bg-accent/60 text-foreground ring-1 ring-border">
+                    <MessageCircle className="size-9" strokeWidth={1.75} />
+                    <span className="absolute -right-1 -bottom-1 flex size-8 items-center justify-center rounded-full bg-background text-primary ring-1 ring-border">
+                      <MousePointerClick
+                        className="size-4"
+                        strokeWidth={1.89}
+                      />
+                    </span>
+                  </div>
+                  <h2 className="text-lg font-semibold text-foreground">
+                    No chat selected
+                  </h2>
                   <p className="text-sm">
                     Select a conversation to start chatting
                   </p>
