@@ -22,23 +22,25 @@ import z from "zod";
 import { useForm } from "@tanstack/react-form";
 import { FieldError, FieldGroup, Field, FieldLabel } from "./ui/field";
 import EmojiPicker, { Theme, EmojiStyle } from "emoji-picker-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { Textarea } from "./ui/textarea";
 import { useSendMessage } from "@/hooks/react-query/mutation-message";
 import { toast } from "sonner";
 import { useVoiceVisualizer, VoiceVisualizer } from "react-voice-visualizer";
 
-const formSchema = z
-  .object({
-    message: z.string().max(7000, "Message must be at most 7000 characters."),
-    file: z.instanceof(File).optional(),
-  })
-  .refine(
+const formFieldsSchema = z.object({
+  message: z.string().max(7000, "Message must be at most 7000 characters."),
+  file: z.instanceof(File).optional(),
+});
+
+const createChatFormSchema = (pendingFiles: File[] | null) =>
+  formFieldsSchema.refine(
     (data) => {
       const hasMessage = data.message?.trim().length > 0;
       const hasFile = !!data.file;
+      const hasPendingAttachments = (pendingFiles?.length ?? 0) > 0;
 
-      return hasMessage || hasFile;
+      return hasMessage || hasFile || hasPendingAttachments;
     },
     {
       message: "Message or file is required.",
@@ -46,7 +48,7 @@ const formSchema = z
     },
   );
 
-type FormValues = z.infer<typeof formSchema>;
+type FormValues = z.infer<typeof formFieldsSchema>;
 
 const MAX_RECORDING_TIME = 60 * 5;
 
@@ -84,13 +86,21 @@ function ChatForm({
     formattedDuration
   } = recorderControls;
 
+  const chatFormSchema = useMemo(
+    () => createChatFormSchema(selectedFiles),
+    [selectedFiles],
+  );
+
   const form = useForm({
     defaultValues: { message: "", file: undefined } as FormValues,
-    validators: { onSubmit: formSchema },
+    validators: { onSubmit: chatFormSchema },
     onSubmit: async ({ value }: { value: FormValues }) => {
       sendMessageFn({
-        content: value.message ?? null,
+        content: value.message?.trim() || null,
         recipient_id,
+        ...(selectedFiles?.length
+          ? { selectedFiles: [...selectedFiles] }
+          : {}),
       });
       setOpen(false);
       setSelectedFiles(null);
@@ -263,7 +273,7 @@ function ChatForm({
                           e.target.value = "";
                         }}
                         className="hidden"
-                        accept="image/*, application/*"
+                        accept="image/*,video/*,audio/*,application/*"
                       />
                       {isInvalid && (
                         <FieldError errors={field.state.meta.errors} />

@@ -1,0 +1,9 @@
+{"sessionId":"0922f2","runId":"post-fix","location":"chat-form.tsx:onSubmit","message":"form submit","data":{"selectedFilesCount":0,"messageLen":2,"passesSelectedToMutation":false,"hypothesisId":"A"},"timestamp":1779272509670}
+{"sessionId":"0922f2","runId":"post-fix","location":"mutation-message.ts:mutationFn","message":"mutation entry","data":{"selectedFilesCount":0,"hasVoice":false,"hypothesisId":"A"},"timestamp":1779272509676}
+{"sessionId":"0922f2","runId":"post-fix","location":"chat-form.tsx:onSubmit","message":"form submit","data":{"selectedFilesCount":1,"messageLen":0,"passesSelectedToMutation":true,"hypothesisId":"A"},"timestamp":1779272518988}
+{"sessionId":"0922f2","runId":"post-fix","location":"mutation-message.ts:mutationFn","message":"mutation entry","data":{"selectedFilesCount":1,"hasVoice":false,"hypothesisId":"A"},"timestamp":1779272519073}
+{"sessionId":"0922f2","runId":"post-fix","location":"upload-file.ts:uploadFile","message":"uploadFile invoked","data":{"name":"icon.png","type":"image/png","hypothesisId":"B"},"timestamp":1779272519073}
+{"sessionId":"0922f2","runId":"post-fix","location":"chat-form.tsx:onSubmit","message":"form submit","data":{"selectedFilesCount":2,"messageLen":0,"passesSelectedToMutation":true,"hypothesisId":"A"},"timestamp":1779272562142}
+{"sessionId":"0922f2","runId":"post-fix","location":"mutation-message.ts:mutationFn","message":"mutation entry","data":{"selectedFilesCount":2,"hasVoice":false,"hypothesisId":"A"},"timestamp":1779272562202}
+{"sessionId":"0922f2","runId":"post-fix","location":"upload-file.ts:uploadFile","message":"uploadFile invoked","data":{"name":"favicon.png","type":"image/png","hypothesisId":"B"},"timestamp":1779272562203}
+{"sessionId":"0922f2","runId":"post-fix","location":"upload-file.ts:uploadFile","message":"uploadFile invoked","data":{"name":"icon.png","type":"image/png","hypothesisId":"B"},"timestamp":1779272563227}

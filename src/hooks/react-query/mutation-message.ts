@@ -56,7 +56,7 @@ export const useSendMessage = ({ setPercentage }: { setPercentage: any }) => {
         message_type: getMessageType(content, uploadedFiles),
         content,
         file_name: uploadedFiles,
-        file_size: [...(selectedFiles?.map((file: any) => file.size) || [])],
+        file_size: selectedFiles?.map((f) => String(f.size)) ?? [],
         duration,
         reply_to_message_id,
         recipient_id,
@@ -88,7 +88,8 @@ export const useSendMessage = ({ setPercentage }: { setPercentage: any }) => {
           : (variables.selectedFiles ?? undefined),
         file_size: variables.voice_note
           ? [String(variables.voice_note.size)]
-          : variables.file_size,
+          : (variables.file_size ??
+            variables.selectedFiles?.map((f) => String(f.size))),
         duration: variables.duration,
         reply_to_message_id: variables.reply_to_message_id,
         is_edited: false,

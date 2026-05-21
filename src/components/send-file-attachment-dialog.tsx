@@ -405,7 +405,7 @@ function SendFileAttachementDialog({
                 e.target.value = "";
               }}
               className="hidden"
-              accept="image/*, application/*"
+              accept="image/*,video/*,audio/*,application/*"
             />
           </div>
         </TabsList>
